@@ -12,7 +12,12 @@ def realized_profit(
     quantity: float,
     economics: EconomicParameters,
 ) -> float:
-    """Calculate one-period realized profit for a demand and order quantity."""
+    """Calculate one-period realized profit for a demand and order quantity.
+
+    If demand is fully satisfied, leftover units receive salvage value. If the
+    retailer stocks out, all ordered units are sold and unmet demand incurs a
+    goodwill penalty.
+    """
 
     if demand <= quantity:
         return (
@@ -33,7 +38,11 @@ def expected_normal_newsvendor_profit(
     demand_std: float,
     economics: EconomicParameters,
 ) -> float:
-    """Expected optimal profit for normal demand under the newsvendor benchmark."""
+    """Expected optimal profit for normal demand under the newsvendor benchmark.
+
+    At the optimal newsvendor quantile, the normal-loss expression simplifies to
+    the mean margin less the critical standard-normal density term.
+    """
 
     z_value = norm.ppf(economics.critical_ratio)
     return (
@@ -46,4 +55,3 @@ def expected_normal_newsvendor_profit(
         * norm.pdf(z_value)
         * demand_std
     )
-

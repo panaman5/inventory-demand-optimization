@@ -77,65 +77,82 @@ class SimulationResult:
 
 
 def run_simulation(parameters: SimulationParameters | None = None) -> SimulationResult:
-    """Run a Monte Carlo comparison of the three thesis ordering policies."""
+    """Run a Monte Carlo comparison of the three thesis ordering policies.
+
+    Each repetition generates an independent demand path and applies all three
+    policies period by period. Reported outputs are averages across repetitions.
+    """
 
     params = parameters or SimulationParameters()
-    economics = params.economics
     rng = np.random.default_rng(params.seed)
 
     values = np.zeros((params.repetitions, params.periods, len(RESULT_COLUMNS)))
-    benchmark_quantity = params.newsvendor_quantity
 
     for repetition in range(params.repetitions):
         demand = rng.normal(params.demand_mean, params.demand_std, params.periods)
-
-        uncensored_quantity = benchmark_quantity
-        burnetas_quantity = benchmark_quantity
-        kaplan_quantity = benchmark_quantity
-        kaplan_state = KaplanMeierState(initial_quantity=benchmark_quantity)
-
-        for period in range(params.periods):
-            values[repetition, period, 0] = newsvendor_quantity_from_history(
-                demand[: period + 1],
-                economics.critical_ratio,
-            )
-            values[repetition, period, 1] = realized_profit(
-                demand[period],
-                uncensored_quantity,
-                economics,
-            )
-            uncensored_quantity = values[repetition, period, 0]
-
-            values[repetition, period, 2] = burnetas_smith_quantity(
-                demand[period],
-                burnetas_quantity,
-                economics.critical_ratio,
-                period,
-            )
-            values[repetition, period, 3] = realized_profit(
-                demand[period],
-                burnetas_quantity,
-                economics,
-            )
-            burnetas_quantity = values[repetition, period, 2]
-
-            values[repetition, period, 4] = kaplan_state.update(
-                demand[period],
-                kaplan_quantity,
-                economics,
-                period,
-            )
-            values[repetition, period, 5] = realized_profit(
-                demand[period],
-                kaplan_quantity,
-                economics,
-            )
-            kaplan_quantity = values[repetition, period, 4]
+        values[repetition, :, :] = _run_single_repetition(demand, params)
 
     expected_profit = expected_normal_newsvendor_profit(
         params.demand_mean,
         params.demand_std,
-        economics,
+        params.economics,
     )
     return SimulationResult(params, values, expected_profit)
 
+
+def _run_single_repetition(
+    demand: np.ndarray,
+    params: SimulationParameters,
+) -> np.ndarray:
+    """Run one demand path through all policies."""
+
+    economics = params.economics
+    benchmark_quantity = params.newsvendor_quantity
+
+    values = np.zeros((params.periods, len(RESULT_COLUMNS)))
+    uncensored_quantity = benchmark_quantity
+    burnetas_quantity = benchmark_quantity
+    kaplan_quantity = benchmark_quantity
+    kaplan_state = KaplanMeierState(initial_quantity=benchmark_quantity)
+
+    for period in range(params.periods):
+        current_demand = demand[period]
+
+        values[period, 0] = newsvendor_quantity_from_history(
+            demand[: period + 1],
+            economics.critical_ratio,
+        )
+        values[period, 1] = realized_profit(
+            current_demand,
+            uncensored_quantity,
+            economics,
+        )
+        uncensored_quantity = values[period, 0]
+
+        values[period, 2] = burnetas_smith_quantity(
+            current_demand,
+            burnetas_quantity,
+            economics.critical_ratio,
+            period,
+        )
+        values[period, 3] = realized_profit(
+            current_demand,
+            burnetas_quantity,
+            economics,
+        )
+        burnetas_quantity = values[period, 2]
+
+        values[period, 4] = kaplan_state.update(
+            current_demand,
+            kaplan_quantity,
+            economics,
+            period,
+        )
+        values[period, 5] = realized_profit(
+            current_demand,
+            kaplan_quantity,
+            economics,
+        )
+        kaplan_quantity = values[period, 4]
+
+    return values

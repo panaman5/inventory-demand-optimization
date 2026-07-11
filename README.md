@@ -44,6 +44,7 @@ Q* = mu + sigma * Phi^-1(Cu / (Cu + Co))
 |-- notebooks/
 |   `-- project_walkthrough.ipynb
 |-- docs/
+|   |-- methodology.md
 |   `-- thesis_summary.md
 |-- tests/
 |   |-- test_policies.py
@@ -92,6 +93,8 @@ print(result.summary())
 The underlying thesis is **"Demand Estimation and Stock Management with Sales Information"** by Panagiotis Skartsilas, submitted for the MSc in Business Mathematics at Athens University of Economics and Business in December 2022.
 
 The original academic work focused on comparing newsvendor policies under fully observed and censored demand. This repository refactors that work into a reusable project structure suitable for further experiments and real-life inventory scenarios.
+
+For modeling assumptions and policy details, see [docs/methodology.md](docs/methodology.md).
 
 ## Roadmap
 
